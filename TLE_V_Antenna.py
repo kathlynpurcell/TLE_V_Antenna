@@ -98,6 +98,26 @@ def plot_TLE(time, az, time_range):
 	# plot it
 	plt.show()
 
+def plot_FITS_and_TLE(table, time_range, time, az):
+	# plot mnt and obsc AZ values
+	plt.plot(time_range, table['MNT_AZ'], label="MNT AZ")
+	plt.plot(time_range, table['OBSC_AZ'], label="OBSC AZ")
+
+	# plot TLE date vs TLE AZ
+	plt.plot(time.utc_datetime(), az.degrees, label="TLE AZ")
+
+	# format the title, axis and legend
+	plt.title("FITS and TLE for "+ str(time_range[0].date()))
+	xformatter = mdates.DateFormatter('%H:%M')
+	plt.gcf().axes[0].xaxis.set_major_formatter(xformatter)
+	plt.ylabel("AZ (Deg)")
+	plt.xlabel("Time (UTC)")
+
+	plt.legend()
+
+	# plot it
+	plt.show()
+
 def main():
 	# example
 	#plot_ex()
@@ -113,7 +133,8 @@ def main():
 
 	# plot the data
 	#plot_FITS(FITS, time_range)
-	plot_TLE(time, az, time_range)
+	#plot_TLE(time, az, time_range)
+	plot_FITS_and_TLE(FITS, time_range, time, az)
 
 if __name__=="__main__":
     main()
