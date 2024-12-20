@@ -9,9 +9,12 @@ from astropy.table import Table
 from astropy.time import Time
 from astropy.timeseries import TimeSeries
 import numpy as np
+import math
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from skyfield.api import load, EarthSatellite, wgs84
+import argparse
+import sys
 
 earth_radius_km = 6371.0
 
@@ -76,7 +79,7 @@ def calculate_TLE(file, TLE, time_range):
 	topocentric = difference.at(t)
 	alt, az, distance = topocentric.altaz()
 
-	return t, az
+	return t, az, alt
 
 
 
@@ -98,43 +101,101 @@ def plot_TLE(time, az, time_range):
 	# plot it
 	plt.show()
 
-def plot_FITS_and_TLE(table, time_range, time, az):
+def plot_FITS_and_TLE(table, time_range, time, az, el):
 	# plot mnt and obsc AZ values
-	plt.plot(time_range, table['MNT_AZ'], label="MNT AZ")
+	plt.subplot(2, 2, 1)
+	#plt.plot(time_range, table['MNT_AZ'], label="MNT AZ")
 	plt.plot(time_range, table['OBSC_AZ'], label="OBSC AZ")
-
 	# plot TLE date vs TLE AZ
 	plt.plot(time.utc_datetime(), az.degrees, label="TLE AZ")
-
 	# format the title, axis and legend
-	plt.title("FITS and TLE for "+ str(time_range[0].date()))
-	xformatter = mdates.DateFormatter('%H:%M')
-	plt.gcf().axes[0].xaxis.set_major_formatter(xformatter)
+	plt.title("AZ")
+	plt.gcf().axes[0].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 	plt.ylabel("AZ (Deg)")
-	plt.xlabel("Time (UTC)")
-
+	#plt.xlabel("Time (UTC)")
+	# legend
 	plt.legend()
 
+	# plot mnt and obsc EL values
+	plt.subplot(2, 2, 3)
+	#plt.plot(time_range, table['MNT_EL'], label="MNT EL")
+	plt.plot(time_range, table['OBSC_EL'], label="OBSC EL")
+	# plot TLE date vs TLE AZ
+	plt.plot(time.utc_datetime(), el.degrees, label="TLE EL")
+	# format the title, axis and legend
+	plt.title("EL")
+	plt.gcf().axes[1].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+	plt.ylabel("EL (Deg)")
+	plt.xlabel("Time (UTC)")
+	plt.legend()
+
+	# plot the delta and beam size for AZ
+	plt.subplot(2, 2, 2)
+	## plot the pos and neg beam size
+	data_pos=0.64/np.cos((table['OBSC_EL'])*(math.pi/180))
+	data_neg=-0.64/np.cos((table['OBSC_EL'])*(math.pi/180))
+	plt.plot(time_range,data_pos,label="Beam Size", c="green")
+	plt.plot(time_range,data_neg, c="green")
+	plt.gcf().axes[2].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+
+
+	# plot the delta and beam size for EL
+	plt.subplot(2, 2, 4)
+	## 
+	data=[0.64]*len(time_range)
+	plt.plot(time_range,data,label="Beam Size", c="green")
+	plt.plot(time_range,np.negative(data), c="green")
+	plt.gcf().axes[3].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
+
+
+
+
+
 	# plot it
+	plt.suptitle("FITS and TLE for "+ str(time_range[0].date()))
 	plt.show()
+
+def parser_args(args):
+	parser = argparse.ArgumentParser()
+	parser.add_argument(
+	    "-f",
+	    "--fits",
+	    type=str,
+	    help="Path to fits file with Antenna position data",
+	)
+	parser.add_argument(
+	    "-t",
+	    "--tle",
+	    type=str,
+	    help="Path to TLE file with projected satelite position data",
+	)
+
+	args = parser.parse_args()
+
+	return args
 
 def main():
 	# example
 	#plot_ex()
 
-	## provide the satelite name, and pass to the functions
-	FITS_file = "SV160.fits"
-	TLE_file = "SV160_TLE"
+	## get the file names from the command line (later, crontab)
+	#testing command: python TLE_V_Antenna.py -f SV160.fits -t SV160_TLE
+	if len(sys.argv) == 1:
+	        sys.argv.append("-h")
+	args = parser_args(sys.argv)
+	FITS_file = args.fits
+	TLE_file = args.tle
 
 	# load the data
 	FITS, time_range = get_and_load_fits(FITS_file)
 	TLE = get_TLE(TLE_file)
-	time, az = calculate_TLE(TLE_file, TLE, time_range)
+	time, az, el = calculate_TLE(TLE_file, TLE, time_range)
 
 	# plot the data
 	#plot_FITS(FITS, time_range)
 	#plot_TLE(time, az, time_range)
-	plot_FITS_and_TLE(FITS, time_range, time, az)
+	plot_FITS_and_TLE(FITS, time_range, time, az, el)
 
 if __name__=="__main__":
     main()
