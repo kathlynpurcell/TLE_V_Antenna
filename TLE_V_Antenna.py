@@ -36,7 +36,12 @@ def get_and_load_fits(file):
 	# convert from MJD to utc time
 	time_range = Time(table['DMJD'], format="mjd").datetime
 
-	return table, time_range
+	# get metadata
+	hdul = fits.open(file)  # open a FITS file
+	hdr = hdul[0].header  # the primary HDU header
+	metadata = {"OBJECT":hdr["OBJECT"], "PROJID":hdr["PROJID"], "FILE":file}
+
+	return table, time_range, metadata
 
 def plot_FITS(table, time_range):
 	# plot mnt and obsc AZ values
@@ -69,9 +74,9 @@ def calculate_TLE(file, TLE, time_range):
 
 	# find the FITS time delta
 	ft = time_range[0]
-	time_delta = (time_range[-1]-time_range[0]).total_seconds()
+	time_delta = (time_range[-1]-time_range[0]).total_seconds() + ft.second + 10
 	# make a skyfield time range from the fits delta
-	t = ts.utc(ft.year, ft.month, ft.day, ft.hour, ft.minute, range(0,int(time_delta),10))
+	t = ts.utc(ft.year, ft.month, ft.day, ft.hour, ft.minute, range(ft.second, int(time_delta),10))
 
 	# conpute the az and alt from GBO
 	bluffton = wgs84.latlon(+38.4195, -79.8318)
@@ -101,7 +106,11 @@ def plot_TLE(time, az, time_range):
 	# plot it
 	plt.show()
 
-def plot_FITS_and_TLE(table, time_range, time, az, el):
+def calc_difference(table, time_range, time, az, el):
+	
+	return az_difference
+
+def plot_FITS_and_TLE(table, time_range, time, az, el, metadata):
 	# plot mnt and obsc AZ values
 	plt.subplot(2, 2, 1)
 	#plt.plot(time_range, table['MNT_AZ'], label="MNT AZ")
@@ -109,7 +118,7 @@ def plot_FITS_and_TLE(table, time_range, time, az, el):
 	# plot TLE date vs TLE AZ
 	plt.plot(time.utc_datetime(), az.degrees, label="TLE AZ")
 	# format the title, axis and legend
-	plt.title("AZ")
+	plt.title("AZ Position: Antenna vs. TLE in Degrees")
 	plt.gcf().axes[0].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 	plt.ylabel("AZ (Deg)")
 	#plt.xlabel("Time (UTC)")
@@ -123,7 +132,7 @@ def plot_FITS_and_TLE(table, time_range, time, az, el):
 	# plot TLE date vs TLE AZ
 	plt.plot(time.utc_datetime(), el.degrees, label="TLE EL")
 	# format the title, axis and legend
-	plt.title("EL")
+	plt.title("EL Position: Antenna vs. TLE in Degrees")
 	plt.gcf().axes[1].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
 	plt.ylabel("EL (Deg)")
 	plt.xlabel("Time (UTC)")
@@ -136,9 +145,11 @@ def plot_FITS_and_TLE(table, time_range, time, az, el):
 	data_neg=-0.64/np.cos((table['OBSC_EL'])*(math.pi/180))
 	plt.plot(time_range,data_pos,label="Beam Size", c="green")
 	plt.plot(time_range,data_neg, c="green")
+	plt.title("AZ Beam Size (+/-) and Antenna vs. TLE Difference (Deg)")
 	plt.gcf().axes[2].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-
-
+	# plot the difference between AZ in Antenna and TLE
+	plt.plot(time_range, table['OBSC_AZ']-az.degrees, label="AZ difference")
+	plt.legend(borderaxespad=3)
 
 	# plot the delta and beam size for EL
 	plt.subplot(2, 2, 4)
@@ -146,14 +157,17 @@ def plot_FITS_and_TLE(table, time_range, time, az, el):
 	data=[0.64]*len(time_range)
 	plt.plot(time_range,data,label="Beam Size", c="green")
 	plt.plot(time_range,np.negative(data), c="green")
+	plt.title("EL Beam Size (+/-) and Antenna vs. TLE Difference (Deg)")
 	plt.gcf().axes[3].xaxis.set_major_formatter(mdates.DateFormatter('%H:%M'))
-
-
-
+	# plot the difference between EL in Antenna and TLE
+	plt.plot(time_range, table['OBSC_EL']-el.degrees, label="EL difference")
+	plt.xlabel("Time (UTC)")
+	plt.legend(borderaxespad=3)
 
 
 	# plot it
-	plt.suptitle("FITS and TLE for "+ str(time_range[0].date()))
+	plt.suptitle("FITS and TLE for "+ metadata["PROJID"]+"\n Date: "
+		+str(time_range[0].date())+"   Source: "+metadata["OBJECT"]+"\nFile: "+metadata["FILE"])
 	plt.show()
 
 def parser_args(args):
@@ -188,14 +202,14 @@ def main():
 	TLE_file = args.tle
 
 	# load the data
-	FITS, time_range = get_and_load_fits(FITS_file)
+	FITS, time_range, metadata = get_and_load_fits(FITS_file)
 	TLE = get_TLE(TLE_file)
 	time, az, el = calculate_TLE(TLE_file, TLE, time_range)
 
 	# plot the data
 	#plot_FITS(FITS, time_range)
 	#plot_TLE(time, az, time_range)
-	plot_FITS_and_TLE(FITS, time_range, time, az, el)
+	plot_FITS_and_TLE(FITS, time_range, time, az, el, metadata)
 
 if __name__=="__main__":
     main()
