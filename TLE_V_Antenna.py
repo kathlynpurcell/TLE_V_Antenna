@@ -13,6 +13,7 @@ import math
 import matplotlib.pyplot as plt
 import matplotlib.dates as mdates
 from skyfield.api import load, EarthSatellite, wgs84
+import time
 import argparse
 import sys
 
@@ -59,18 +60,38 @@ def plot_FITS(table, time_range):
 	# plot it
 	plt.show()
 
-def get_TLE(file):
+def get_TLE(file, metadata):
 	## take the file name and get the relevant TLE data
-	with open(file) as f:
-	    TLE = [line.rstrip() for line in f]
-	f.close()
-	return TLE
 	
-def calculate_TLE(file, TLE, time_range):
+	TLE_weblink = "https://celestrak.org/NORAD/elements/supplemental/sup-gp.php?FILE=iridium&FORMAT=tle"
+	ts = load.timescale()
+
+	# can run from file historically
+	if file:
+		with open(file) as f:
+		    TLE = [line.rstrip() for line in f]
+		f.close()
+		satellite = EarthSatellite(TLE[1], TLE[2], file, ts)
+
+	# run automatically from celestrack
+	else:
+		satellites = load.tle_file(TLE_weblink)
+		by_name = {sat.name: sat for sat in satellites}
+		#iridium_name = "IRIDIUM "+metadata["OBJECT"][2:]
+		iridium_name_test = "IRIDIUM 172" # testing
+		satellite = by_name[iridium_name_test]
+		# save the file since it will change
+		tle_file_name = iridium_name_test.replace(" ","_")
+		timestr = time.strftime("%Y%m%d.%H%M%S")
+		#tle_file_path = "/raid/scratch/cyborg/GBOdata/"+FITS_path+"/Antenna"
+		tle_save = load.download(TLE_weblink, filename=tle_file_name+"."+timestr+".tle")
+
+	return satellite
+	
+def calculate_TLE(file, satellite, time_range):
 	## convert the TLE string into a skyfield object
 	## return: time range and positions
 	ts = load.timescale()
-	satellite = EarthSatellite(TLE[1], TLE[2], file, ts)
 
 	# find the FITS time delta
 	ft = time_range[0]
@@ -182,9 +203,9 @@ def parser_args(args):
 	    "-t",
 	    "--tle",
 	    type=str,
+	    default=False,
 	    help="Path to TLE file with projected satelite position data",
 	)
-
 	args = parser.parse_args()
 
 	return args
@@ -203,13 +224,14 @@ def main():
 
 	# load the data
 	FITS, time_range, metadata = get_and_load_fits(FITS_file)
-	TLE = get_TLE(TLE_file)
-	time, az, el = calculate_TLE(TLE_file, TLE, time_range)
+	if "SV" in metadata["OBJECT"]:
+		TLE = get_TLE(TLE_file, metadata)
+		time, az, el = calculate_TLE(TLE_file, TLE, time_range)
 
-	# plot the data
-	#plot_FITS(FITS, time_range)
-	#plot_TLE(time, az, time_range)
-	plot_FITS_and_TLE(FITS, time_range, time, az, el, metadata)
+		# plot the data
+		#plot_FITS(FITS, time_range)
+		#plot_TLE(time, az, time_range)
+		plot_FITS_and_TLE(FITS, time_range, time, az, el, metadata)
 
 if __name__=="__main__":
     main()
