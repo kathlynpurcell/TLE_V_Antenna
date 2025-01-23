@@ -2,7 +2,7 @@
 
 source tle_env/bin/activate
 
-inotifywait -e create -e move -r -m /raid/scratch/cyborg/GBOdata
+inotifywait -e create -e move -r -m /raid/scratch/cyborg/GBOdata |
     while read path action file; do
         echo "Checking the new file is fits, check for SV later..."
         if [[ "$file" =~ .*fits$ ]]; then # Does the file end with .fits?

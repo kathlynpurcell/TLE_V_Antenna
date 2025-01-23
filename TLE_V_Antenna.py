@@ -7,7 +7,6 @@
 from astropy.io import fits
 from astropy.table import Table
 from astropy.time import Time
-from astropy.timeseries import TimeSeries
 import numpy as np
 import math
 import matplotlib.pyplot as plt
@@ -181,7 +180,7 @@ def plot_FITS_and_TLE(table, time_range, time, az, el, metadata):
 	plt.xlabel("Time (UTC)")
 	plt.legend(borderaxespad=3)
 
-
+        plt.rcParams['font.size'] = 6
 	# plot it
 	plt.suptitle("FITS and TLE for "+ metadata["PROJID"]+"\n Date: "
 		+str(time_range[0].date())+"   Source: "+metadata["OBJECT"]+"\nFile: "+metadata["FILE"])
