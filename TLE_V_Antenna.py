@@ -77,11 +77,10 @@ def get_TLE(file, metadata):
 	else:
 		satellites = load.tle_file(TLE_weblink)
 		by_name = {sat.name: sat for sat in satellites}
-		#iridium_name = "IRIDIUM "+metadata["OBJECT"][2:]
-		iridium_name_test = "IRIDIUM 172" # testing
-		satellite = by_name[iridium_name_test]
-		# save the file since it will change
-		tle_file_name = iridium_name_test.replace(" ","_")
+		iridium_name = "IRIDIUM "+metadata["OBJECT"][2:]
+		satellite = by_name[iridium_name]
+		# save the file since the TLE will change
+		tle_file_name = iridium_name.replace(" ","_")
 		timestr = time.strftime("%Y%m%d.%H%M%S")
 		tle_file_path = metadata["DATA_DIR"]+tle_file_name+"."+timestr+".tle"
 		tle_save = load.download(TLE_weblink, filename=tle_file_path)
@@ -127,9 +126,6 @@ def plot_TLE(time, az, time_range):
 	# plot it
 	plt.show()
 
-def calc_difference(table, time_range, time, az, el):
-	
-	return az_difference
 
 def plot_FITS_and_TLE(table, time_range, time, az, el, metadata):
 	# plot mnt and obsc AZ values
@@ -189,7 +185,7 @@ def plot_FITS_and_TLE(table, time_range, time, az, el, metadata):
 	# plot it
 	plt.suptitle("FITS and TLE for "+ metadata["PROJID"]+"\n Date: "
 		+str(time_range[0].date())+"   Source: "+metadata["OBJECT"]+"\nFile: "+metadata["FILE"])
-	plt.savefig(metadata["DATA_DIR"]+"/"+metadata["OBJECT"]+metadata["FILE"]+".png")
+	plt.savefig(metadata["DATA_DIR"]+"/"+metadata["OBJECT"]+"."+metadata["FILE"]+".png")
 	#plt.show()
 
 def parser_args(args):
@@ -220,7 +216,7 @@ def parser_args(args):
 
 def main():
 	# example
-	#plot_ex()
+	# plot_ex()
 
 	## get the file names from the command line (later, crontab)
 	#testing command: python TLE_V_Antenna.py -f SV160.fits -t SV160_TLE
