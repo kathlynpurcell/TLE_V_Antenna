@@ -27,20 +27,20 @@ def plot_ex():
 	plt.plot(data,data_0)
 	plt.show()
 
-def get_and_load_fits(file):
+def get_and_load_fits(data_dir, file):
 	## take the file name and get the relevant TLE data
 	## return: the TLE data in a list of strings
 	
 	# get and subsample the FITS data
-	table = Table.read(file, hdu="ANTPOSPF")[::100]
+	table = Table.read(data_dir+file, hdu="ANTPOSPF")[::100]
 	
 	# convert from MJD to utc time
 	time_range = Time(table['DMJD'], format="mjd").datetime
 
 	# get metadata
-	hdul = fits.open(file)  # open a FITS file
+	hdul = fits.open(data_dir+file)  # open a FITS file
 	hdr = hdul[0].header  # the primary HDU header
-	metadata = {"OBJECT":hdr["OBJECT"], "PROJID":hdr["PROJID"], "FILE":file}
+	metadata = {"OBJECT":hdr["OBJECT"], "PROJID":hdr["PROJID"], "FILE":file, "DATA_DIR":data_dir}
 
 	return table, time_range, metadata
 
@@ -83,12 +83,12 @@ def get_TLE(file, metadata):
 		# save the file since it will change
 		tle_file_name = iridium_name_test.replace(" ","_")
 		timestr = time.strftime("%Y%m%d.%H%M%S")
-		#tle_file_path = "/raid/scratch/cyborg/GBOdata/"+FITS_path+"/Antenna"
-		tle_save = load.download(TLE_weblink, filename=tle_file_name+"."+timestr+".tle")
+		tle_file_path = metadata["DATA_DIR"]+tle_file_name+"."+timestr+".tle"
+		tle_save = load.download(TLE_weblink, filename=tle_file_path)
 
 	return satellite
 	
-def calculate_TLE(file, satellite, time_range):
+def calculate_TLE(satellite, time_range):
 	## convert the TLE string into a skyfield object
 	## return: time range and positions
 	ts = load.timescale()
@@ -189,7 +189,8 @@ def plot_FITS_and_TLE(table, time_range, time, az, el, metadata):
 	# plot it
 	plt.suptitle("FITS and TLE for "+ metadata["PROJID"]+"\n Date: "
 		+str(time_range[0].date())+"   Source: "+metadata["OBJECT"]+"\nFile: "+metadata["FILE"])
-	plt.show()
+	plt.savefig(metadata["DATA_DIR"]+"/"+metadata["OBJECT"]+metadata["FILE"]+".png")
+	#plt.show()
 
 def parser_args(args):
 	parser = argparse.ArgumentParser()
@@ -206,6 +207,13 @@ def parser_args(args):
 	    default=False,
 	    help="Path to TLE file with projected satelite position data",
 	)
+	parser.add_argument(
+	    "-dd",
+	    "--data-dir",
+	    type=str,
+	    default=False,
+	    help="Where to save TLE and PNG results",
+	)
 	args = parser.parse_args()
 
 	return args
@@ -221,17 +229,21 @@ def main():
 	args = parser_args(sys.argv)
 	FITS_file = args.fits
 	TLE_file = args.tle
+	data_dir = args.data_dir
 
 	# load the data
-	FITS, time_range, metadata = get_and_load_fits(FITS_file)
+	FITS, time_range, metadata = get_and_load_fits(data_dir,FITS_file)
+
 	if "SV" in metadata["OBJECT"]:
 		TLE = get_TLE(TLE_file, metadata)
-		time, az, el = calculate_TLE(TLE_file, TLE, time_range)
+		time, az, el = calculate_TLE(TLE, time_range)
 
 		# plot the data
 		#plot_FITS(FITS, time_range)
 		#plot_TLE(time, az, time_range)
 		plot_FITS_and_TLE(FITS, time_range, time, az, el, metadata)
+	else:
+		print("Not a SV object, moving on...")
 
 if __name__=="__main__":
     main()
