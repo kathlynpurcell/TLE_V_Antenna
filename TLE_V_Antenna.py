@@ -15,6 +15,7 @@ from skyfield.api import load, EarthSatellite, wgs84
 import time
 import argparse
 import sys
+import os
 
 earth_radius_km = 6371.0
 
@@ -74,6 +75,7 @@ def get_TLE(file, metadata):
 
 	# run automatically from celestrack
 	else:
+		os.chdir('/raid/scratch/cyborg/logs')
 		satellites = load.tle_file(TLE_weblink)
 		by_name = {sat.name: sat for sat in satellites}
 		iridium_name = "IRIDIUM "+metadata["OBJECT"][2:]
@@ -127,6 +129,7 @@ def plot_TLE(time, az, time_range):
 
 
 def plot_FITS_and_TLE(table, time_range, time, az, el, metadata):
+	plt.rcParams['font.size'] = 4
 	# plot mnt and obsc AZ values
 	plt.subplot(2, 2, 1)
 	#plt.plot(time_range, table['MNT_AZ'], label="MNT AZ")
@@ -180,7 +183,6 @@ def plot_FITS_and_TLE(table, time_range, time, az, el, metadata):
 	plt.xlabel("Time (UTC)")
 	plt.legend(borderaxespad=3)
 
-        plt.rcParams['font.size'] = 6
 	# plot it
 	plt.suptitle("FITS and TLE for "+ metadata["PROJID"]+"\n Date: "
 		+str(time_range[0].date())+"   Source: "+metadata["OBJECT"]+"\nFile: "+metadata["FILE"])
